@@ -1,0 +1,222 @@
+import React, { useState, useEffect } from "react";
+import {
+	Heart,
+	Stethoscope,
+	Thermometer,
+	Ruler,
+	AlertCircle,
+	RefreshCw,
+	Clock,
+	ChevronRight,
+	ChevronLeft
+} from "lucide-react";
+
+// Firebase imports
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue } from "firebase/database";
+
+// Firebase configuration - replace with your actual config
+const firebaseConfig = {
+	apiKey: "AIzaSyDcL2zoGd_2eGIMlyaP4JDRiu-rkUJ6NzI",
+	authDomain: "fyearesp32sim.firebaseapp.com",
+	databaseURL: "https://fyearesp32sim-default-rtdb.firebaseio.com",
+	projectId: "fyearesp32sim",
+	storageBucket: "fyearesp32sim.firebasestorage.app",
+	messagingSenderId: "760886945879",
+	appId: "1:760886945879:web:a4c63a20ee996340aa1b12",
+	measurementId: "G-QFQNVH0L4B",
+};
+
+// Rest of the previous code remains the same... (severity calculation, etc.)
+
+const PatientMonitoringDashboard = () => {
+	const [patientData, setPatientData] = useState(null);
+	const [footHealth, setFootHealth] = useState(null);
+	const [severity, setSeverity] = useState(0);
+	const [error, setError] = useState(null);
+	const [updateTimes, setUpdateTimes] = useState([]);
+	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [database, setDatabase] = useState(null);
+	
+	// New state for patient selection
+	const [patients, setPatients] = useState([]);
+	const [currentPatientIndex, setCurrentPatientIndex] = useState(0);
+
+	// Initialize Firebase on component mount
+	useEffect(() => {
+		let app;
+		try {
+			app = initializeApp(firebaseConfig);
+			const db = getDatabase(app);
+			setDatabase(db);
+		} catch (initError) {
+			if (initError.code !== "app/duplicate-app") {
+				setError("Failed to initialize Firebase");
+			}
+		}
+	}, []);
+
+	// Fetch data function
+	const fetchData = () => {
+		if (!database) return;
+
+		setIsRefreshing(true);
+		const parentRef = ref(database, "adddelete");
+
+		onValue(
+			parentRef,
+			(snapshot) => {
+				const data = snapshot.val();
+				if (data) {
+					// Get all patient keys dynamically
+					const keys = Object.keys(data);
+					const availablePatients = keys.flatMap(key => 
+						Object.keys(data[key].patients || {}).map(patientKey => ({
+							path: `${key}/patients/${patientKey}`,
+							id: patientKey
+						}))
+					);
+
+					// Update patients list if changed
+					if (JSON.stringify(availablePatients) !== JSON.stringify(patients)) {
+						setPatients(availablePatients);
+						// Reset to first patient if list changes
+						setCurrentPatientIndex(0);
+					}
+
+					// If no patients, handle accordingly
+					if (availablePatients.length === 0) {
+						setError("No patients found");
+						setIsRefreshing(false);
+						return;
+					}
+
+					// Select current patient
+					const currentPatient = availablePatients[currentPatientIndex];
+					const patientRef = ref(database, `adddelete/${currentPatient.path}`);
+
+					onValue(
+						patientRef,
+						(patientSnapshot) => {
+							const patientData = patientSnapshot.val();
+							if (patientData) {
+								setPatientData(patientData.info || null);
+								const sensorData = patientData.sensorData?.footHealth;
+								if (sensorData) {
+									setFootHealth(sensorData);
+									const newSeverity = calculateSeverity(
+										sensorData.footPressure,
+										sensorData.footTemp
+									);
+									setSeverity(newSeverity);
+
+									// Add current timestamp to update times
+									const currentTime = new Date().toLocaleString();
+									setUpdateTimes(prev => [currentTime, ...prev].slice(0, 5));
+								} else {
+									setFootHealth(null);
+									setSeverity(0);
+								}
+							} else {
+								setError("No patient data found");
+							}
+							setIsRefreshing(false);
+						},
+						(err) => {
+							setError(`Firebase Error: ${err.message}`);
+							setIsRefreshing(false);
+						}
+					);
+				} else {
+					setError("No patient data found");
+					setIsRefreshing(false);
+				}
+			},
+			(err) => {
+				setError(`Firebase Error: ${err.message}`);
+				setIsRefreshing(false);
+			}
+		);
+	};
+
+	// Auto-refresh interval
+	useEffect(() => {
+		if (!database) return;
+
+		const intervalId = setInterval(fetchData, 5000);
+		return () => clearInterval(intervalId);
+	}, [database, currentPatientIndex]);
+
+	// Patient navigation functions
+	const nextPatient = () => {
+		setCurrentPatientIndex((prevIndex) => 
+			(prevIndex + 1) % patients.length
+		);
+	};
+
+	const prevPatient = () => {
+		setCurrentPatientIndex((prevIndex) => 
+			(prevIndex - 1 + patients.length) % patients.length
+		);
+	};
+
+	// Rest of the previous render code remains the same, but add patient navigation
+
+	return (
+		<div className="min-h-screen bg-gray-100 flex flex-col">
+			{/* Previous error notification code */}
+
+			{/* Hero Section */}
+			<div className="bg-blue-600 text-white p-8 shadow-md">
+				<div className="container mx-auto flex items-center justify-between">
+					<div className="flex items-center">
+						<Heart size={64} className="mr-4" />
+						<div>
+							<h1 className="text-3xl font-bold">Patient Monitoring Dashboard</h1>
+							<p className="text-xl">Real-time Foot Health Tracking</p>
+						</div>
+					</div>
+					<div className="flex items-center">
+						{/* Patient Navigation */}
+						{patients.length > 1 && (
+							<div className="flex items-center mr-4">
+								<button 
+									onClick={prevPatient}
+									className="mr-2 bg-blue-500 hover:bg-blue-600 p-2 rounded"
+								>
+									<ChevronLeft />
+								</button>
+								<span>
+									Patient {currentPatientIndex + 1} of {patients.length}
+								</span>
+								<button 
+									onClick={nextPatient}
+									className="ml-2 bg-blue-500 hover:bg-blue-600 p-2 rounded"
+								>
+									<ChevronRight />
+								</button>
+							</div>
+						)}
+						{/* Refresh Button */}
+						<button 
+							onClick={fetchData}
+							disabled={isRefreshing}
+							className={`
+								flex items-center px-4 py-2 rounded 
+								${isRefreshing ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'}
+								text-white transition-colors
+							`}
+						>
+							<RefreshCw className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+							Refresh
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Rest of the previous render code remains the same */}
+		</div>
+	);
+};
+
+export default PatientMonitoringDashboard;
