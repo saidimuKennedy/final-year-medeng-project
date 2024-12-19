@@ -6,7 +6,7 @@ import {
 	Ruler,
 	AlertCircle,
 	RefreshCw,
-	Clock
+	Clock,
 } from "lucide-react";
 
 // Firebase imports
@@ -15,14 +15,14 @@ import { getDatabase, ref, onValue } from "firebase/database";
 
 // Firebase configuration - replace with your actual config
 const firebaseConfig = {
-	apiKey: "AIzaSyDcL2zoGd_2eGIMlyaP4JDRiu-rkUJ6NzI",
-	authDomain: "fyearesp32sim.firebaseapp.com",
-	databaseURL: "https://fyearesp32sim-default-rtdb.firebaseio.com",
-	projectId: "fyearesp32sim",
-	storageBucket: "fyearesp32sim.firebasestorage.app",
-	messagingSenderId: "760886945879",
-	appId: "1:760886945879:web:a4c63a20ee996340aa1b12",
-	measurementId: "G-QFQNVH0L4B",
+	apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+	authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+	databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+	projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+	storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+	messagingSenderId: import.meta.env.VITE_FIREBASE_MASSAGING_SENDER_ID,
+	appId: import.meta.env.VITE_FIREBASE_APP_ID,
+	measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENTI_D,
 };
 
 // Severity calculation function
@@ -48,10 +48,30 @@ const calculateSeverity = (pressure, temp) => {
 };
 
 const SEVERITY_LEVELS = [
-	{ max: 20, color: "bg-green-500", text: "Low Risk", warningClass: "text-green-600" },
-	{ max: 50, color: "bg-yellow-500", text: "Moderate Risk", warningClass: "text-yellow-600" },
-	{ max: 80, color: "bg-orange-500", text: "High Risk", warningClass: "text-orange-600" },
-	{ max: 100, color: "bg-red-600", text: "Critical Risk", warningClass: "text-red-600" },
+	{
+		max: 20,
+		color: "bg-green-500",
+		text: "Low Risk",
+		warningClass: "text-green-600",
+	},
+	{
+		max: 50,
+		color: "bg-yellow-500",
+		text: "Moderate Risk",
+		warningClass: "text-yellow-600",
+	},
+	{
+		max: 80,
+		color: "bg-orange-500",
+		text: "High Risk",
+		warningClass: "text-orange-600",
+	},
+	{
+		max: 100,
+		color: "bg-red-600",
+		text: "Critical Risk",
+		warningClass: "text-red-600",
+	},
 ];
 
 const getSeverityInfo = (severity) => {
@@ -99,8 +119,9 @@ const PatientMonitoringDashboard = () => {
 				const data = snapshot.val();
 				if (data) {
 					const keys = Object.keys(data);
-					const patientGroups = keys.filter(key => 
-						data[key].patients && Object.keys(data[key].patients).length > 0
+					const patientGroups = keys.filter(
+						(key) =>
+							data[key].patients && Object.keys(data[key].patients).length > 0
 					);
 
 					// If no patient groups found
@@ -111,11 +132,13 @@ const PatientMonitoringDashboard = () => {
 					}
 
 					// Select a random patient group
-					const randomGroupKey = patientGroups[Math.floor(Math.random() * patientGroups.length)];
+					const randomGroupKey =
+						patientGroups[Math.floor(Math.random() * patientGroups.length)];
 					const patientsInGroup = Object.keys(data[randomGroupKey].patients);
 
 					// Select a random patient from the group
-					const randomPatientKey = patientsInGroup[Math.floor(Math.random() * patientsInGroup.length)];
+					const randomPatientKey =
+						patientsInGroup[Math.floor(Math.random() * patientsInGroup.length)];
 					const patientPath = `${randomGroupKey}/patients/${randomPatientKey}`;
 					const patientRef = ref(database, `adddelete/${patientPath}`);
 
@@ -140,7 +163,7 @@ const PatientMonitoringDashboard = () => {
 
 									// Add current timestamp to update times
 									const currentTime = new Date().toLocaleString();
-									setUpdateTimes(prev => [currentTime, ...prev].slice(0, 5));
+									setUpdateTimes((prev) => [currentTime, ...prev].slice(0, 5));
 								} else {
 									setFootHealth(null);
 									setSeverity(0);
@@ -199,20 +222,24 @@ const PatientMonitoringDashboard = () => {
 					<div className="flex items-center">
 						<Heart size={64} className="mr-4" />
 						<div>
-							<h1 className="text-3xl font-bold">Patient Monitoring Dashboard</h1>
+							<h1 className="text-3xl font-bold">
+								Patient Monitoring Dashboard
+							</h1>
 							<p className="text-xl">Real-time Foot Health Tracking</p>
 						</div>
 					</div>
-					<button 
+					<button
 						onClick={fetchData}
 						disabled={isRefreshing}
 						className={`
 							flex items-center px-4 py-2 rounded 
-							${isRefreshing ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'}
+							${isRefreshing ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"}
 							text-white transition-colors
 						`}
 					>
-						<RefreshCw className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+						<RefreshCw
+							className={`mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+						/>
 						Refresh
 					</button>
 				</div>
@@ -262,8 +289,8 @@ const PatientMonitoringDashboard = () => {
 					{updateTimes.length > 0 ? (
 						<ul className="space-y-2">
 							{updateTimes.map((time, index) => (
-								<li 
-									key={index} 
+								<li
+									key={index}
 									className="flex items-center text-sm text-gray-600"
 								>
 									<Clock className="mr-2 w-4 h-4" />
@@ -285,11 +312,13 @@ const PatientMonitoringDashboard = () => {
 						<div className="space-y-4">
 							{/* Warning Section */}
 							{severity > 50 && (
-								<div className={`
+								<div
+									className={`
 									p-4 rounded-lg 
 									${severityInfo.warningClass} 
-									bg-${severityInfo.color.split('-')[1]}-100
-								`}>
+									bg-${severityInfo.color.split("-")[1]}-100
+								`}
+								>
 									<AlertCircle className="inline-block mr-2" />
 									<span className="font-semibold">
 										{severityInfo.text} - Immediate Attention Required
