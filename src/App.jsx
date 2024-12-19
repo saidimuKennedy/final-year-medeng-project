@@ -15,15 +15,7 @@ import { getDatabase, ref, onValue } from "firebase/database";
 
 // Firebase configuration - replace with your actual config
 const firebaseConfig = {
-	apiKey: "AIzaSyDcL2zoGd_2eGIMlyaP4JDRiu-rkUJ6NzI",
-	authDomain: "fyearesp32sim.firebaseapp.com",
-	databaseURL: "https://fyearesp32sim-default-rtdb.firebaseio.com",
-	projectId: "fyearesp32sim",
-	storageBucket: "fyearesp32sim.firebasestorage.app",
-	messagingSenderId: "760886945879",
-	appId: "1:760886945879:web:a4c63a20ee996340aa1b12",
-	measurementId: "G-QFQNVH0L4B",
-};
+}
 
 // Severity calculation function
 const calculateSeverity = (pressure, temp) => {
